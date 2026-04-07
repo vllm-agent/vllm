@@ -76,6 +76,7 @@ class TrtLlmBf16Experts(mk.FusedMoEExpertsMonolithic):
         activation_key: QuantKey | None,
     ) -> bool:
         return routing_method in [
+            RoutingMethodType.Default,
             RoutingMethodType.DeepSeekV3,
             RoutingMethodType.Llama4,
             RoutingMethodType.Renormalize,
