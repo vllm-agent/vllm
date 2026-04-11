@@ -104,7 +104,6 @@ class ClassifierPoolerHead(SequencePoolerHead):
         self,
         classifier: ClassifierFn | None = None,
         logit_bias: float | None = None,
-        logit_scale: float | None = None,
         head_dtype: torch.dtype | str | None = None,
         activation: ActivationFn | None = None,
     ) -> None:
@@ -112,7 +111,6 @@ class ClassifierPoolerHead(SequencePoolerHead):
 
         self.classifier = classifier
         self.logit_bias = logit_bias
-        self.logit_scale = logit_scale
         self.head_dtype = head_dtype
         self.activation = activation
 
@@ -142,8 +140,6 @@ class ClassifierPoolerHead(SequencePoolerHead):
         # logits shape: [batchsize, num_labels]
         if self.logit_bias is not None:
             logits -= self.logit_bias
-        if self.logit_scale is not None:
-            logits *= self.logit_scale
 
         if self.activation is not None:
             flags = [p.use_activation for p in pooling_params]
