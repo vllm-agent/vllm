@@ -126,7 +126,7 @@ def parallel_launch_with_config(
     world_size: int,
     worker: Callable[Concatenate[ProcessGroupInfo, VllmConfig, Any, P], None],
     vllm_config: VllmConfig,
-    env_dict: dict[Any, Any] | None,
+    env_dict: dict[Any, Any],
     *args: P.args,
     **kwargs: P.kwargs,
 ) -> None:

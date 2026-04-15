@@ -26,7 +26,6 @@ from tests.kernels.moe.utils import TestMLP, make_test_weights, moe_quantize_wei
 from vllm.config import (
     CompilationConfig,
     ParallelConfig,
-    SchedulerConfig,
     VllmConfig,
     set_current_vllm_config,
 )
@@ -54,7 +53,7 @@ from vllm.utils.flashinfer import (
     has_flashinfer_nvlink_two_sided,
 )
 from vllm.utils.import_utils import has_deep_ep, has_mori, has_nixl_ep
-from vllm.utils.math_utils import cdiv, next_power_of_2
+from vllm.utils.math_utils import cdiv
 from vllm.utils.torch_utils import set_random_seed
 from vllm.v1.worker.workspace import (
     init_workspace_manager,
@@ -66,9 +65,8 @@ fp8_dtype = torch.float8_e4m3fn  # current_platform.fp8_dtype
 SHAPE_COMBOS = [
     (1, 128, 256),
     (32, 1024, 512),
-    (222, 2048, 2048),
+    (222, 2048, 2048),  # should be big enough to exercise DP chunking
 ]
-MAX_M = max([x[0] for x in SHAPE_COMBOS])
 
 NUM_EXPERTS = [8, 64]
 TOP_KS = [2, 6]
@@ -114,7 +112,7 @@ BACKEND_SUPPORTED_QUANTS: dict[str, set[str | None]] = {
     "mori":                        {None, "fp8", "modelopt_fp8"},
     "flashinfer_nvlink_two_sided": {None,        "modelopt_fp8", "modelopt_fp4"},
     "flashinfer_nvlink_one_sided": {None,        "modelopt_fp8", "modelopt_fp4"},
-    "deepep_low_latency":          {None,        "modelopt_fp8", "modelopt_fp4"},
+    "deepep_low_latency":          {None, "fp8", "modelopt_fp8", "modelopt_fp4"},
     "deepep_high_throughput":      {None, "fp8", "modelopt_fp8", "modelopt_fp4"},
     "nixl_ep":                     {None, "fp8", "modelopt_fp8"},
 }
@@ -365,9 +363,9 @@ def is_valid_config(config: MoETestConfig) -> tuple[bool, str | None]:
         )
 
     # routed_input_transform + quantization + high hidden dimensions
-    # TODO: Disable >= 2048 for now due to insane errors.
+    # TODO: Disable >= 2048 w/fp8 + deepep LL for now due to insane errors.
     if (
-        config.use_routed_input_transform
+        (config.use_routed_input_transform or config.backend == "deepep_low_latency")
         and config.quantization is not None
         and config.k >= 2048
     ):
@@ -1665,6 +1663,9 @@ def test_moe_layer(
 
     verbosity = pytestconfig.getoption("verbose")
 
+    test_env = dict()
+    test_env["VLLM_MOE_DP_CHUNK_SIZE"] = "128"
+    monkeypatch.setenv("VLLM_MOE_DP_CHUNK_SIZE", "128")
     if os.environ.get("VLLM_LOGGING_LEVEL") is None:
         monkeypatch.setenv("VLLM_LOGGING_LEVEL", "ERROR")
 
@@ -1689,11 +1690,7 @@ def test_moe_layer(
     compilation_config.pass_config.fuse_allreduce_rms = False  # for now
 
     vllm_config = VllmConfig(
-        parallel_config=parallel_config,
-        compilation_config=compilation_config,
-        scheduler_config=SchedulerConfig.default_factory(
-            max_num_batched_tokens=next_power_of_2(MAX_M)
-        ),
+        parallel_config=parallel_config, compilation_config=compilation_config
     )
 
     test_configs = generate_valid_test_configs(
@@ -1721,7 +1718,7 @@ def test_moe_layer(
             world_size,
             _parallel_worker,
             vllm_config,
-            None,
+            test_env,
             test_configs,
             verbosity,
         )

@@ -8,6 +8,7 @@ from typing import Literal, cast, get_args, overload
 import torch
 from torch.nn.parameter import UninitializedParameter
 
+import vllm.envs as envs
 from vllm._aiter_ops import rocm_aiter_ops
 from vllm.config import VllmConfig, get_current_vllm_config
 from vllm.config.parallel import ExpertPlacementStrategy
@@ -481,7 +482,7 @@ class FusedMoE(PluggableLayer):
             in_dtype=moe_in_dtype,
             moe_backend=vllm_config.kernel_config.moe_backend,
             router_logits_dtype=router_logits_dtype,
-            max_num_tokens=vllm_config.scheduler_config.max_num_batched_tokens,
+            max_num_tokens=envs.VLLM_MOE_DP_CHUNK_SIZE,
             has_bias=has_bias,
             is_act_and_mul=is_act_and_mul,
             is_lora_enabled=vllm_config.lora_config is not None,

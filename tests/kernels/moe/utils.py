@@ -69,7 +69,6 @@ def make_dummy_moe_config(
         in_dtype=in_dtype,
         device="cuda",
         routing_method=RoutingMethodType.TopK,
-        max_num_tokens=512,
     )
 
 
