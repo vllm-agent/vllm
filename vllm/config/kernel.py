@@ -115,7 +115,6 @@ MoEBackend = Literal[
     "flashinfer_cutedsl",
     "marlin",
     "aiter",
-    "emulation",
 ]
 
 
@@ -143,10 +142,7 @@ class KernelConfig:
     - "flashinfer_cutlass": Use FlashInfer with CUTLASS kernels
     - "flashinfer_cutedsl": Use FlashInfer with CuteDSL kernels (FP4 only)
     - "marlin": Use Marlin kernels (weight-only quantization)
-    - "aiter": Use AMD AITer kernels (ROCm only)
-    - "emulation": use BF16/FP16 GEMM, dequantizing weights and
-                   running QDQ on activations.
-    """
+    - "aiter": Use AMD AITer kernels (ROCm only)"""
 
     @field_validator("moe_backend", mode="before")
     @classmethod
