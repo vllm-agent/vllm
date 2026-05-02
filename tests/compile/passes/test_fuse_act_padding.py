@@ -59,7 +59,7 @@ class TestModel(torch.nn.Module):
 
     def ops_in_model_before(self):
         return [
-            torch.ops.vllm_ir.fused_add_rms_norm,
+            rocm_aiter_ops.get_rmsnorm_fused_add_op(),
             torch.ops.aten.constant_pad_nd,
         ]
 
